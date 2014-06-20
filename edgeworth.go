@@ -30,11 +30,11 @@ func (inst Instruction) GetRegisterIndex(index int) (RegisterIndex, error) {
    var a Instruction
    a = (inst & 0xFFFFFFFFFFFF0000) >> 16 
    if index >= 0 && index < 6  {
-      return RegisterIndex((a >> 8)*Instruction(index)), nil
+      return RegisterIndex(a>>(8*Instruction(index))), nil
    } else {
       return 0, &GetRegisterIndexError { 
          index,
-      } 
+      }
    }
 }
 
