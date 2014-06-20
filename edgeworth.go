@@ -28,7 +28,7 @@ func (inst Instruction) GetControlBits() ControlBits {
 
 func (inst Instruction) GetRegisterIndex(index int) (RegisterIndex, error) {
    var a Instruction
-   a = (inst &^ 0x000000000000FFFF) >> 16 
+   a = (inst & 0xFFFFFFFFFFFF0000) >> 16 
    if index >= 0 && index < 6  {
       return RegisterIndex(a>>(8*Instruction(index))), nil
    } else {
@@ -36,5 +36,13 @@ func (inst Instruction) GetRegisterIndex(index int) (RegisterIndex, error) {
          index,
       }
    }
+}
+
+func (d Datum) GetTagBits() byte {
+   return byte((d & 0xFF000000) >> 24)
+}
+
+func (d Datum) GetValue() Datum {
+   return Datum(d & 0x00FFFFFF)
 }
 
