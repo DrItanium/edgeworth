@@ -28,7 +28,7 @@ func (inst Instruction) GetControlBits() ControlBits {
 
 func (inst Instruction) GetRegisterIndex(index int) (RegisterIndex, error) {
    var a Instruction
-   a = (inst & 0xFFFFFFFFFFFF0000) >> 16 
+   a = (inst &^ 0x000000000000FFFF) >> 16 
    if index >= 0 && index < 6  {
       return RegisterIndex(a>>(8*Instruction(index))), nil
    } else {
