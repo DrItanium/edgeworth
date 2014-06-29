@@ -10,6 +10,10 @@
    It also provides a half instruction format for making it possible to have
    two instructions per wide instruction (most register based instructions do
    not need all of the encoding space so lets put several of them in there)
+
+   The other important thing to note is that bottom five instruction groups are
+   an exact duplicate of the iris ones and still operate on 16-bit values
+   (except for the registers).
 */
 package edgeworth
 
@@ -22,18 +26,15 @@ const (
 )
 
 type Instruction uint64
-type HalfInstruction uint32
 type ControlBits uint16
+
+type HalfInstruction uint32
 type HalfControlBits byte
+
 type RegisterIndex byte
 type Word uint32
 type Register uint32
 
-type Core struct {
-	registers [RegisterCount]Register
-	data      [DataCount]Word
-	code      [InstructionCount]Instruction
-}
 type GetRegisterIndexError struct {
 	IndexProvided int
 }
@@ -66,5 +67,26 @@ func (inst HalfInstruction) GetRegisterIndex(index int) (RegisterIndex, error) {
 		return RegisterIndex(a >> (8 * HalfInstruction(index))), nil
 	} else {
 		return 0, &GetRegisterIndexError{index}
+	}
+}
+
+type Core struct {
+	registers [RegisterCount]Register
+	data      [DataCount]Word
+	code      [InstructionCount]Instruction
+	pc        Word
+}
+
+func (core *Core) InitializeCore() {
+	/* initialize all of the different pieces of the core */
+	core.pc = 0
+	for i := 0; i < RegisterCount; i++ {
+		core.registers[i] = 0
+	}
+	for i := 0; i < InstructionCount; i++ {
+		core.code[i] = 0
+	}
+	for i := 0; i < DataCount; i++ {
+		core.data[i] = 0
 	}
 }
