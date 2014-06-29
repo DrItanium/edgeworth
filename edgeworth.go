@@ -58,6 +58,9 @@ type HalfControlBits byte
 type RegisterIndex byte
 type Word uint32
 
+// represents the decoding and dispatch logic for a group of operations
+type GroupOperation func(*Core, Instruction)
+
 type GetRegisterIndexError struct {
 	IndexProvided int
 }
