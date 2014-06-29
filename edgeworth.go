@@ -5,7 +5,11 @@
    generation.
 
    Edgeworth extends the iris architecture to 32-bits and is a modified harvard
-   architecture where data and code can be used somewhat interchangeably
+   architecture where data and code can be used somewhat interchangeably.
+
+   It also provides a half instruction format for making it possible to have
+   two instructions per wide instruction (most register based instructions do
+   not need all of the encoding space so lets put several of them in there)
 */
 package edgeworth
 
@@ -18,14 +22,16 @@ const (
 )
 
 type Instruction uint64
+type HalfInstruction uint32
 type ControlBits uint16
+type HalfControlBits byte
 type RegisterIndex byte
-type Datum uint32
+type Word uint32
 type Register uint32
 
 type Core struct {
 	registers [RegisterCount]Register
-	data      [DataCount]Datum
+	data      [DataCount]Word
 	code      [InstructionCount]Instruction
 }
 type GetRegisterIndexError struct {
@@ -46,16 +52,19 @@ func (inst Instruction) GetRegisterIndex(index int) (RegisterIndex, error) {
 	if index >= 0 && index < 6 {
 		return RegisterIndex(a >> (8 * Instruction(index))), nil
 	} else {
-		return 0, &GetRegisterIndexError{
-			index,
-		}
+		return 0, &GetRegisterIndexError{index}
 	}
 }
-
-func (d Datum) GetTagBits() byte {
-	return byte((d & 0xFF000000) >> 24)
+func (inst HalfInstruction) GetControlBits() HalfControlBits {
+	return HalfControlBits(inst & 0x000000FF)
 }
 
-func (d Datum) GetValue() Datum {
-	return Datum(d & 0x00FFFFFF)
+func (inst HalfInstruction) GetRegisterIndex(index int) (RegisterIndex, error) {
+	var a HalfInstruction
+	a = (inst & 0xFFFFFF00) >> 8
+	if index >= 0 && index < 3 {
+		return RegisterIndex(a >> (8 * HalfInstruction(index))), nil
+	} else {
+		return 0, &GetRegisterIndexError{index}
+	}
 }
