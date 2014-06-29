@@ -23,6 +23,7 @@ const (
 	RegisterCount                    = 256
 	InstructionCount                 = 16777216
 	DataCount                        = 16777216
+	StackCount                       = 16777216
 	InstructionControlBitSection     = 0x000000000000FFFF
 	InstructionRegisterSection       = 0xFFFFFFFFFFFF0000
 	InstructionMaxRegisterCount      = 6
@@ -107,14 +108,17 @@ func (inst HalfInstruction) GetRegisterIndex(index int) (RegisterIndex, error) {
 
 type Core struct {
 	registers [RegisterCount]Register
-	data      [DataCount]Word
 	code      [InstructionCount]Instruction
+	data      [DataCount]Word
+	stack     [StackCount]Word
 	pc        Word
+	sp        Word
 }
 
 func (core *Core) InitializeCore() {
 	/* initialize all of the different pieces of the core */
 	core.pc = 0
+	core.sp = 0x00FFFFFF
 	for i := 0; i < RegisterCount; i++ {
 		core.registers[i] = 0
 	}
@@ -123,6 +127,9 @@ func (core *Core) InitializeCore() {
 	}
 	for i := 0; i < DataCount; i++ {
 		core.data[i] = 0
+	}
+	for i := 0; i < StackCount; i++ {
+		core.stack[i] = 0
 	}
 }
 
@@ -183,5 +190,4 @@ func (core *Core) WriteToCodeAddress(address Word, value Instruction) error {
 		core.code[address] = value
 		return nil
 	}
-
 }
