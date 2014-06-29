@@ -32,6 +32,15 @@ const (
 	HalfInstructionMaxRegisterCount  = 3
 )
 
+/* reserved registers */
+const (
+	ProgramCounterRegisterIndex   = 255
+	StackPointerRegisterIndex     = 254
+	ImpliedPredicateRegisterIndex = 253
+)
+
+/* indirect registers */
+
 type Instruction uint64
 type ControlBits uint16
 
@@ -40,7 +49,6 @@ type HalfControlBits byte
 
 type RegisterIndex byte
 type Word uint32
-type Register uint32
 
 type GetRegisterIndexError struct {
 	IndexProvided int
@@ -107,18 +115,14 @@ func (inst HalfInstruction) GetRegisterIndex(index int) (RegisterIndex, error) {
 }
 
 type Core struct {
-	registers [RegisterCount]Register
+	registers [RegisterCount]Word
 	code      [InstructionCount]Instruction
 	data      [DataCount]Word
 	stack     [StackCount]Word
-	pc        Word
-	sp        Word
 }
 
 func (core *Core) InitializeCore() {
 	/* initialize all of the different pieces of the core */
-	core.pc = 0
-	core.sp = 0x00FFFFFF
 	for i := 0; i < RegisterCount; i++ {
 		core.registers[i] = 0
 	}
@@ -131,29 +135,38 @@ func (core *Core) InitializeCore() {
 	for i := 0; i < StackCount; i++ {
 		core.stack[i] = 0
 	}
+	/* now set the corresponding registers correctly */
+	core.registers[ProgramCounterRegisterIndex] = 0
+	core.registers[StackPointerRegisterIndex] = 0x00FFFFFF
 }
 
 func (core *Core) IncrementProgramCounter() {
-	if core.pc == InstructionCount-1 {
-		core.pc = 0
+	pc := core.GetProgramCounter()
+	if pc == InstructionCount-1 {
+		pc = 0
 	} else {
-		core.pc++
+		pc = pc + 1
 	}
+	core.SetProgramCounter(pc)
 }
 
 func (core *Core) DecrementProgramCounter() {
-	if core.pc == 0 {
-		core.pc = InstructionCount - 1
+	pc := core.GetProgramCounter()
+	if pc == 0 {
+		pc = InstructionCount - 1
 	} else {
-		core.pc--
+		pc = pc - 1
 	}
+	core.SetProgramCounter(pc)
 }
-
+func (core *Core) GetProgramCounter() Word {
+	return core.registers[ProgramCounterRegisterIndex]
+}
 func (core *Core) SetProgramCounter(address Word) error {
 	if address >= InstructionCount {
 		return &SetProgramCounterError{address}
 	} else {
-		core.pc = address
+		core.registers[ProgramCounterRegisterIndex] = address
 		return nil
 	}
 }
