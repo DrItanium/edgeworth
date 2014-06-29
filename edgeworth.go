@@ -30,9 +30,14 @@ const (
 	HalfInstructionControlBitSection = 0x000000FF
 	HalfInstructionRegisterSection   = 0xFFFFFF00
 	HalfInstructionMaxRegisterCount  = 3
+	EndOfStackSpace                  = StackCount - 1
+	EndOfCodeSpace                   = InstructionCount - 1
+	EndOfDataSpace                   = DataCount - 1
 	CodeSectionId                    = "code"
 	DataSectionId                    = "data"
 	StackSectionId                   = "stack"
+	ProgramCounterId                 = "pc"
+	StackPointerId                   = "sp"
 )
 
 /* reserved registers */
@@ -134,12 +139,12 @@ func (core *Core) InitializeCore() {
 		core.stack[i] = 0
 	}
 	/* now set the corresponding registers correctly */
-	core.registers[StackPointerRegisterIndex] = 0x00FFFFFF
+	core.SetStackPointer(EndOfStackSpace)
 }
 
 func (core *Core) IncrementProgramCounter() {
 	pc := core.GetProgramCounter()
-	if pc == InstructionCount-1 {
+	if pc == EndOfCodeSpace {
 		pc = 0
 	} else {
 		pc = pc + 1
@@ -150,7 +155,7 @@ func (core *Core) IncrementProgramCounter() {
 func (core *Core) DecrementProgramCounter() {
 	pc := core.GetProgramCounter()
 	if pc == 0 {
-		pc = InstructionCount - 1
+		pc = EndOfCodeSpace
 	} else {
 		pc = pc - 1
 	}
@@ -161,7 +166,7 @@ func (core *Core) GetProgramCounter() Word {
 }
 func (core *Core) SetProgramCounter(address Word) error {
 	if address >= InstructionCount {
-		return &ProcessorCounterError{"pc", address}
+		return &ProcessorCounterError{ProgramCounterId, address}
 	} else {
 		core.registers[ProgramCounterRegisterIndex] = address
 		return nil
@@ -207,7 +212,7 @@ func (core *Core) GetStackPointer() Word {
 
 func (core *Core) SetStackPointer(value Word) error {
 	if value >= StackCount {
-		return &ProcessorCounterError{"sp", value}
+		return &ProcessorCounterError{StackPointerId, value}
 	} else {
 		core.registers[StackPointerRegisterIndex] = value
 		return nil
@@ -233,7 +238,7 @@ func (core *Core) ReadFromStackAddress(address Word) (Word, error) {
 
 func (core *Core) PushOntoStack(value Word) {
 	sp := core.GetStackPointer()
-	if sp == StackCount-1 {
+	if sp == EndOfStackSpace {
 		sp = 0
 	} else {
 		sp = sp + 1
@@ -246,7 +251,7 @@ func (core *Core) PopOffStack() Word {
 	sp := core.GetStackPointer()
 	value, _ := core.ReadFromStackAddress(sp)
 	if sp == 0 {
-		sp = StackCount - 1
+		sp = EndOfStackSpace
 	} else {
 		sp = sp - 1
 	}
