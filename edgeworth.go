@@ -30,6 +30,9 @@ const (
 	HalfInstructionControlBitSection = 0x000000FF
 	HalfInstructionRegisterSection   = 0xFFFFFF00
 	HalfInstructionMaxRegisterCount  = 3
+	CodeSectionId                    = "code"
+	DataSectionId                    = "data"
+	StackSectionId                   = "stack"
 )
 
 /* reserved registers */
@@ -54,35 +57,30 @@ type GetRegisterIndexError struct {
 	IndexProvided int
 }
 
-type SetProgramCounterError struct {
-	ProgramCounter Word
+type ProcessorCounterError struct {
+	Type     string
+	ValueSet Word
 }
 
 type MemoryError struct {
 	Address Word
 	IsLoad  bool
-	IsCode  bool
+	Section string
 }
 
 func (e *GetRegisterIndexError) Error() string {
 	return fmt.Sprintf("Register index %d is out of range!", e.IndexProvided)
 }
 
-func (e *SetProgramCounterError) Error() string {
-	return fmt.Sprintf("Attempted to set program counter to %d when max is %d!", e.ProgramCounter, InstructionCount)
+func (e *ProcessorCounterError) Error() string {
+	return fmt.Sprintf("Attempted to set %s to %d which is out of range!", e.Type, e.ValueSet)
 }
 
 func (e *MemoryError) Error() string {
-	var memory string
-	if e.IsCode {
-		memory = "code"
-	} else {
-		memory = "data"
-	}
 	if e.IsLoad {
-		return fmt.Sprintf("Attempted to load address %d which is out of %s memory range!", e.Address, memory)
+		return fmt.Sprintf("Attempted to load address %d which is out of %s memory range!", e.Address, e.Section)
 	} else {
-		return fmt.Sprintf("Attempted to write to an address %d which is out of %s memory range!", e.Address, memory)
+		return fmt.Sprintf("Attempted to write to an address %d which is out of %s memory range!", e.Address, e.Section)
 	}
 }
 
@@ -136,7 +134,6 @@ func (core *Core) InitializeCore() {
 		core.stack[i] = 0
 	}
 	/* now set the corresponding registers correctly */
-	core.registers[ProgramCounterRegisterIndex] = 0
 	core.registers[StackPointerRegisterIndex] = 0x00FFFFFF
 }
 
@@ -164,7 +161,7 @@ func (core *Core) GetProgramCounter() Word {
 }
 func (core *Core) SetProgramCounter(address Word) error {
 	if address >= InstructionCount {
-		return &SetProgramCounterError{address}
+		return &ProcessorCounterError{"pc", address}
 	} else {
 		core.registers[ProgramCounterRegisterIndex] = address
 		return nil
@@ -173,15 +170,15 @@ func (core *Core) SetProgramCounter(address Word) error {
 
 func (core *Core) LoadFromDataAddress(address Word) (Word, error) {
 	if address >= DataCount {
-		return 0, &MemoryError{address, true, false}
+		return 0, &MemoryError{address, true, DataSectionId}
 	} else {
 		return core.data[address], nil
 	}
 }
 
-func (core *Core) WriteToDataAddress(address Word, value Word) error {
+func (core *Core) WriteToDataAddress(address, value Word) error {
 	if address >= DataCount {
-		return &MemoryError{address, false, false}
+		return &MemoryError{address, false, DataSectionId}
 	} else {
 		core.data[address] = value
 		return nil
@@ -190,7 +187,7 @@ func (core *Core) WriteToDataAddress(address Word, value Word) error {
 
 func (core *Core) LoadFromCodeAddress(address Word) (Instruction, error) {
 	if address >= InstructionCount {
-		return 0, &MemoryError{address, true, true}
+		return 0, &MemoryError{address, true, CodeSectionId}
 	} else {
 		return core.code[address], nil
 	}
@@ -198,9 +195,61 @@ func (core *Core) LoadFromCodeAddress(address Word) (Instruction, error) {
 
 func (core *Core) WriteToCodeAddress(address Word, value Instruction) error {
 	if address >= InstructionCount {
-		return &MemoryError{address, false, true}
+		return &MemoryError{address, false, CodeSectionId}
 	} else {
 		core.code[address] = value
 		return nil
 	}
+}
+func (core *Core) GetStackPointer() Word {
+	return core.registers[StackPointerRegisterIndex]
+}
+
+func (core *Core) SetStackPointer(value Word) error {
+	if value >= StackCount {
+		return &ProcessorCounterError{"sp", value}
+	} else {
+		core.registers[StackPointerRegisterIndex] = value
+		return nil
+	}
+}
+
+func (core *Core) WriteToStackAddress(address, value Word) error {
+	if address >= StackCount {
+		return &MemoryError{address, false, StackSectionId}
+	} else {
+		core.stack[address] = value
+		return nil
+	}
+}
+
+func (core *Core) ReadFromStackAddress(address Word) (Word, error) {
+	if address >= StackCount {
+		return 0, &MemoryError{address, true, StackSectionId}
+	} else {
+		return core.stack[address], nil
+	}
+}
+
+func (core *Core) PushOntoStack(value Word) {
+	sp := core.GetStackPointer()
+	if sp == StackCount-1 {
+		sp = 0
+	} else {
+		sp = sp + 1
+	}
+	core.WriteToStackAddress(sp, value)
+	core.SetStackPointer(sp)
+}
+
+func (core *Core) PopOffStack() Word {
+	sp := core.GetStackPointer()
+	value, _ := core.ReadFromStackAddress(sp)
+	if sp == 0 {
+		sp = StackCount - 1
+	} else {
+		sp = sp - 1
+	}
+	core.SetStackPointer(sp)
+	return value
 }
