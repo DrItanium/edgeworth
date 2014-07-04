@@ -18,6 +18,9 @@ const (
 	ArithmeticOperationBitwiseOr
 	ArithmeticOperationBitwiseNot
 	ArithmeticOperationBitwiseXor
+
+	/* this should never exceed 16 */
+	ArithmeticOperationCount
 )
 
 /* Some helpful constants */
