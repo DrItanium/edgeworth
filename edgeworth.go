@@ -15,6 +15,7 @@ const (
 
 type Word uint32
 type Control byte
+type SystemMemory [MemoryCapacity]Word
 type UnitChannel chan Instruction
 
 type Instruction struct {
@@ -29,18 +30,16 @@ type AccumulatorUnit struct {
 
 type MemoryUnit struct {
 	AccumulatorUnit
-	Memory [MemoryCapacity]Word
+	Memory *SystemMemory
 }
 
 type Core struct {
-	InstructionPointer Word
-	Accumulator        UnitChannel
-	Memory             UnitChannel
+	Accumulator UnitChannel
+	Memory      UnitChannel
 }
 
-func (core *Core) InitializeCore(accumulator, memory UnitChannel) {
+func (core *Core) InitializeCore(accumulator, memory, UnitChannel) {
 	/* initialize all of the different pieces of the core */
-	core.InstructionPointer = 0
 	core.Accumulator = accumulator
 	core.Memory = memory
 }
