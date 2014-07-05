@@ -1,6 +1,6 @@
 /*
    Package edgeworth is an accumulator based architecture used to explore using
-   channels in go. It is a 32-bit word/data architecture
+   channels in go. It is a 32-bit word/data architecture.
 */
 package edgeworth
 
@@ -9,13 +9,13 @@ import "fmt"
 /* indirect registers */
 
 const (
-	MemoryCapacity        = 4294967296 / 4 //Internally the Memory unit loads 32-bit addresses
-	InstructionBundleSize = 4              //We load four instructions at a time
+	MemoryCapacity        = 4294967296
+	InstructionBundleSize = 5 //We load four instructions at a time
 )
 
 type Word uint32
 type Control byte
-type SystemMemory [MemoryCapacity]Word
+type SystemMemory [DataMemoryCapacity]byte
 type UnitChannel chan Instruction
 
 type Instruction struct {
@@ -38,7 +38,7 @@ type Core struct {
 	Memory      UnitChannel
 }
 
-func (core *Core) InitializeCore(accumulator, memory, UnitChannel) {
+func (core *Core) InitializeCore(accumulator, memory UnitChannel) {
 	/* initialize all of the different pieces of the core */
 	core.Accumulator = accumulator
 	core.Memory = memory
