@@ -41,20 +41,6 @@ type Core struct {
 func (core *Core) InitializeCore(accumulator, memory UnitChannel) {
 	/* initialize all of the different pieces of the core */
 	core.InstructionPointer = 0
-	core.Accumulator = make(UnitChannel)
-	core.Memory = make(UnitChannel)
-}
-
-func (core *Core) IncrementInstructionPointer() {
-	core.InstructionPointer++
-}
-
-func (core *Core) DecrementInstructionPointer() {
-	core.InstructionPointer--
-}
-func (core *Core) GetInstructionPointer() Word {
-	return core.InstructionPointer
-}
-func (core *Core) SetInstructionPointer(address Word) {
-	core.InstructionPointer = address
+	core.Accumulator = accumulator
+	core.Memory = memory
 }
