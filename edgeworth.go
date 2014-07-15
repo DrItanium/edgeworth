@@ -35,7 +35,7 @@ type Word uint32
 
 const (
 	RegisterCount       = 256
-	MemorySize          = 65536
+	MemorySize          = 16777216
 	InstructionGroupMax = 8
 )
 
