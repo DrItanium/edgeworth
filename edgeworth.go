@@ -18,7 +18,7 @@ const (
 )
 
 type Core struct {
-	Gpr                [RegisterCount]Word
+	Registers          [RegisterCount]Word
 	CodeMemory         [MemorySize]Instruction
 	DataMemory         [MemorySize]Word
 	StackMemory        [MemorySize]Word
@@ -38,10 +38,11 @@ func (e *InstructionRegisterRequestError) Error() string {
 		return fmt.Printf("Attempted to request register field %d which is out of range", e.Index)
 	}
 }
+
 func (i *Instruction) GetControlBits() ControlBits {
 	return ControlBits(*i & 0x000000FF)
 }
-func (i *Instruction) GetRegister(index int) (RegisterIndex, error) {
+func (i *Instruction) GetRegisterField(index int) (RegisterIndex, error) {
 	switch index {
 	case 0:
 		return RegisterIndex(*i & 0x0000FF00 >> 8), nil
@@ -70,7 +71,7 @@ func (i *Instruction) SetImmediate(value Word) {
 	*i = *i&^0xFFFF0000 | Instruction(v)<<16
 }
 
-func (i *Instruction) SetRegister(index int, value RegisterIndex) error {
+func (i *Instruction) SetRegisterField(index int, value RegisterIndex) error {
 	switch index {
 	case 0:
 		*i = *i&^0x0000FF00 | Instruction(value)<<8
