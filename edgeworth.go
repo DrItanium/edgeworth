@@ -33,9 +33,9 @@ type InstructionRegisterRequestError struct {
 
 func (e *InstructionRegisterRequestError) Error() string {
 	if e.Write {
-		return fmt.Printf("Attempted to write to register field %d which is out of range", e.Index)
+		return fmt.Sprintf("Attempted to write to register field %d which is out of range", e.Index)
 	} else {
-		return fmt.Printf("Attempted to request register field %d which is out of range", e.Index)
+		return fmt.Sprintf("Attempted to request register field %d which is out of range", e.Index)
 	}
 }
 
@@ -51,7 +51,7 @@ func (i *Instruction) GetRegisterField(index int) (RegisterIndex, error) {
 	case 2:
 		return RegisterIndex(*i & 0xFF000000 >> 24), nil
 	default:
-		return 0, InstructionRegisterRequestError{Index: index, Write: false}
+		return 0, &InstructionRegisterRequestError{Index: index, Write: false}
 	}
 }
 
@@ -68,7 +68,7 @@ func (i *Instruction) GetImmediate() Word {
 }
 
 func (i *Instruction) SetImmediate(value Word) {
-	*i = *i&^0xFFFF0000 | Instruction(v)<<16
+	*i = *i&^0xFFFF0000 | Instruction(value)<<16
 }
 
 func (i *Instruction) SetRegisterField(index int, value RegisterIndex) error {
@@ -83,6 +83,6 @@ func (i *Instruction) SetRegisterField(index int, value RegisterIndex) error {
 		*i = *i&^0xFF000000 | Instruction(value)<<24
 		return nil
 	default:
-		return InstructionRegisterRequestError{Index: index, Write: true}
+		return &InstructionRegisterRequestError{Index: index, Write: true}
 	}
 }
