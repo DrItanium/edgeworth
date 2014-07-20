@@ -34,3 +34,15 @@ func (c *Core) Swap2Stack() {
 func (c *Core) DupStack() {
 	c.PushOntoStack(c.PeekAtStack())
 }
+
+/* pushes an instruction onto the stack in two operations in little endian order this means that the top of the stack will have the lower 16-bits and the following cell will have the upper 16 */
+func (c *Core) PushInstructionOntoStack(inst Instruction) {
+	c.PushOntoStack(Word(inst & 0xFFFF0000 >> 16))
+	c.PushOntoStack(Word(inst & 0x0000FFFF))
+}
+
+func (c *Core) PopInstructionOffStack() Instruction {
+	lower := Instruction(c.PopOffStack())
+	lower.SetImmediate(c.PopOffStack())
+	return lower
+}
