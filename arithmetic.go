@@ -3,7 +3,7 @@ package edgeworth
 
 type ArithmeticOperation func(Word, Word) Word
 
-var basicOperations = [OperationPerGroupMax]ArithmeticOperation{
+var BasicArithmeticOperations = [OperationPerGroupMax]ArithmeticOperation{
 	func(x, y Word) Word { return x + y },  // add
 	func(x, y Word) Word { return x - y },  // sub
 	func(x, y Word) Word { return x * y },  // mul
