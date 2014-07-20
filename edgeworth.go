@@ -12,9 +12,11 @@ type Instruction uint32
 type Word uint16
 
 const (
-	RegisterCount       = 256
-	MemorySize          = 65536
-	InstructionGroupMax = 8
+	RegisterCount           = 256
+	MemorySize              = 65536
+	InstructionPointerIndex = 255
+	StackPointerIndex       = 254
+	InstructionGroupMax     = 8
 )
 
 type Core struct {
@@ -22,7 +24,6 @@ type Core struct {
 	CodeMemory         [MemorySize]Instruction
 	DataMemory         [MemorySize]Word
 	StackMemory        [MemorySize]Word
-	InstructionPointer Word
 	AdvanceIP          Bit
 	TerminateExecution Bit
 }
@@ -39,9 +40,26 @@ func (e *InstructionRegisterRequestError) Error() string {
 	}
 }
 
+func (c *Core) GetInstructionPointer() Word {
+	return c.Registers[InstructionPointerIndex]
+}
+
+func (c *Core) GetStackPointer() Word {
+	return c.Registers[StackPointerIndex]
+}
+
+func (c *Core) SetStackPointer(value Word) {
+	c.Registers[StackPointerIndex] = value
+}
+
+func (c *Core) SetInstructionPointer(value Word) {
+	c.Registers[InstructionPointerIndex] = value
+}
+
 func (i *Instruction) GetControlBits() ControlBits {
 	return ControlBits(*i & 0x000000FF)
 }
+
 func (i *Instruction) GetRegisterField(index int) (RegisterIndex, error) {
 	switch index {
 	case 0:
