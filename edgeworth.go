@@ -25,6 +25,7 @@ type Core struct {
 	CodeMemory         [MemorySize]Instruction
 	DataMemory         [MemorySize]Word
 	StackMemory        [MemorySize]Word
+	CallMemory         [MemorySize]Word
 	AdvanceIP          Bit
 	TerminateExecution Bit
 }
