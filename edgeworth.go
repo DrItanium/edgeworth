@@ -17,6 +17,7 @@ const (
 	InstructionPointerIndex = 255
 	StackPointerIndex       = 254
 	InstructionGroupMax     = 8
+	OperationPerGroupMax    = 32
 )
 
 type Core struct {
