@@ -43,7 +43,6 @@ var BasicArithmeticOperations = [OperationPerGroupMax]ArithmeticOperation{
 	func(x, _ Word) Word { return ^x },     // bitwise not
 	func(x, y Word) Word { return x ^ y },  // bitwise xor
 	func(x, y Word) Word { return x &^ y }, //bitwise clear
-
 }
 
 func (op *OpBits) IsArithmeticRegisterForm() bool {
@@ -71,13 +70,16 @@ func (op *OpBits) IsArithmeticFullImmediateForm() bool {
 		return false
 	}
 }
-func (c *Core) DecodeArithmeticOperation(i *Instruction) error {
+
+/* returns an encoded function pointer of the decoded operation */
+func (c *Core) DecodeArithmeticOperation(i *Instruction) ([]DecodedOperation, error) {
 	cbits := i.GetControlBits()
 	op := cbits.GetOperation()
 	if op.IsArithmeticRegisterForm() {
 		idest, isrc0, isrc1 := i.ExtractRegisterFields()
-		c.Registers[idest] = BasicArithmeticOperations[op](c.Registers[isrc0], c.Registers[isrc1])
-		return nil
+		return func() {
+			c.Registers[idest] = BasicArithmeticOperations[op](c.Registers[isrc0], c.Registers[isrc1])
+		}, nil
 	} else if op.IsArithmeticHalfImmediateForm() {
 		idest, isrc0, imm := i.ExtractRegisterFields()
 		index := 0
@@ -89,18 +91,25 @@ func (c *Core) DecodeArithmeticOperation(i *Instruction) error {
 		case ArithmeticMultiplyImmediate:
 			index = ArithmeticMultiply
 		case ArithmeticDivideImmediate:
+			if imm == 0 {
+				return nil, &DivideByZeroError{}
+			}
 			index = ArithmeticDivide
 		case ArithmeticRemainderImmediate:
+			if imm == 0 {
+				return nil, &DivideByZeroError{}
+			}
 			index = ArithmeticRemainder
 		case ArithmeticShiftLeftImmediate:
 			index = ArithmeticShiftLeft
 		case ArithmeticShiftRightImmediate:
 			index = ArithmeticShiftRight
 		default:
-			return &InvalidOperationError{Cbits: cbits}
+			return nil, &InvalidOperationError{Cbits: cbits}
 		}
-		c.Registers[idest] = BasicArithmeticOperations[index](c.Registers[isrc0], Word(imm))
-		return nil
+		return func() {
+			c.Registers[idest] = BasicArithmeticOperations[index](c.Registers[isrc0], Word(imm))
+		}, nil
 	} else if op.IsArithmeticFullImmediateForm() {
 		idest, imm := i.ExtractRegisterImmediateFields()
 		index := 0
@@ -115,15 +124,17 @@ func (c *Core) DecodeArithmeticOperation(i *Instruction) error {
 			index = ArithmeticBitwiseClear
 		case ArithmeticBitwiseNotFullImmediate:
 			/* special case */
-			c.Registers[idest] = BasicArithmeticOperations[ArithmeticBitwiseNot](imm, 0)
-			return nil
+			return func() {
+				c.Registers[idest] = BasicArithmeticOperations[ArithmeticBitwiseNot](imm, 0)
+			}, nil
 		default:
-			return &InvalidOperationError{Cbits: cbits}
+			return nil, &InvalidOperationError{Cbits: cbits}
 		}
 		/* This is a destructive modify */
-		c.Registers[idest] = BasicArithmeticOperations[index](c.Registers[idest], imm)
-		return nil
+		return func() {
+			c.Registers[idest] = BasicArithmeticOperations[index](c.Registers[idest], imm)
+		}, nil
 	} else {
-		return &InvalidOperationError{Cbits: cbits}
+		return nil, &InvalidOperationError{Cbits: cbits}
 	}
 }

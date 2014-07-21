@@ -10,6 +10,7 @@ type OpBits byte
 type ControlBits byte
 type Instruction uint32
 type Word uint16
+type DecodedOperation func()
 
 const (
 	RegisterCount           = 256
@@ -29,13 +30,20 @@ const (
 )
 
 type Core struct {
-	Registers          [RegisterCount]Word
-	CodeMemory         [MemorySize]Instruction
-	DataMemory         [MemorySize]Word
-	StackMemory        [MemorySize]Word
-	AdvanceIP          Bit
-	TerminateExecution Bit
+	Registers                    [RegisterCount]Word
+	CodeMemory                   [MemorySize]Instruction
+	DataMemory                   [MemorySize]Word
+	StackMemory                  [MemorySize]Word
+	AdvanceIP                    Bit
+	TerminateExecution           Bit
+	ExecutionStream              chan DecodedOperation
+	TemporaryInstructionRegister Instruction
 }
+
+func (c *Core) InitializeCore() {
+	c.ExecutionStream = make(chan DecodedOperation, 16)
+}
+
 type InstructionRegisterRequestError struct {
 	Write bool
 	Index int
@@ -43,6 +51,12 @@ type InstructionRegisterRequestError struct {
 
 type InvalidOperationError struct {
 	Cbits ControlBits
+}
+
+type DivideByZeroError struct{}
+
+func (e *DivideByZeroError) Error() string {
+	return "Attempted to divide by zero"
 }
 
 func (e *InvalidOperationError) Error() string {
