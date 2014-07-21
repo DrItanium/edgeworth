@@ -13,12 +13,19 @@ type Word uint16
 type DecodedOperation func()
 
 const (
-	RegisterCount           = 256
-	MemorySize              = 65536
+	RegisterCount        = 256
+	MemorySize           = 65536
+	InstructionGroupMax  = 8
+	OperationPerGroupMax = 32
+	// Registers implicitly used by the microarchitecture
 	InstructionPointerIndex = 255
 	StackPointerIndex       = 254
-	InstructionGroupMax     = 8
-	OperationPerGroupMax    = 32
+	ZeroRegisterIndex       = 253
+	Temporary0Register      = 252
+	Temporary1Register      = 251
+	Temporary2Register      = 250
+	Temporary3Register      = 249
+	BankSelectRegister      = 248
 )
 
 const (
@@ -42,6 +49,7 @@ type Core struct {
 
 func (c *Core) InitializeCore() {
 	c.ExecutionStream = make(chan DecodedOperation, 16)
+	c.Registers[ZeroRegisterIndex] = 0
 }
 
 type InstructionRegisterRequestError struct {

@@ -77,64 +77,82 @@ func (c *Core) DecodeArithmeticOperation(i *Instruction) ([]DecodedOperation, er
 	op := cbits.GetOperation()
 	if op.IsArithmeticRegisterForm() {
 		idest, isrc0, isrc1 := i.ExtractRegisterFields()
-		return func() {
+		return []DecodedOperation{func() {
 			c.Registers[idest] = BasicArithmeticOperations[op](c.Registers[isrc0], c.Registers[isrc1])
-		}, nil
+		}}, nil
 	} else if op.IsArithmeticHalfImmediateForm() {
-		idest, isrc0, imm := i.ExtractRegisterFields()
-		index := 0
-		switch op {
-		case ArithmeticAddImmediate:
-			index = ArithmeticAdd
-		case ArithmeticSubtractImmediate:
-			index = ArithmeticSubtract
-		case ArithmeticMultiplyImmediate:
-			index = ArithmeticMultiply
-		case ArithmeticDivideImmediate:
-			if imm == 0 {
-				return nil, &DivideByZeroError{}
-			}
-			index = ArithmeticDivide
-		case ArithmeticRemainderImmediate:
-			if imm == 0 {
-				return nil, &DivideByZeroError{}
-			}
-			index = ArithmeticRemainder
-		case ArithmeticShiftLeftImmediate:
-			index = ArithmeticShiftLeft
-		case ArithmeticShiftRightImmediate:
-			index = ArithmeticShiftRight
-		default:
-			return nil, &InvalidOperationError{Cbits: cbits}
-		}
-		return func() {
-			c.Registers[idest] = BasicArithmeticOperations[index](c.Registers[isrc0], Word(imm))
-		}, nil
+		return c.DecodeArithmeticHalfImmediateForm(op, i)
 	} else if op.IsArithmeticFullImmediateForm() {
-		idest, imm := i.ExtractRegisterImmediateFields()
-		index := 0
-		switch op {
-		case ArithmeticBitwiseAndFullImmediate:
-			index = ArithmeticBitwiseAnd
-		case ArithmeticBitwiseOrFullImmediate:
-			index = ArithmeticBitwiseOr
-		case ArithmeticBitwiseXorFullImmediate:
-			index = ArithmeticBitwiseXor
-		case ArithmeticBitwiseClearFullImmediate:
-			index = ArithmeticBitwiseClear
-		case ArithmeticBitwiseNotFullImmediate:
-			/* special case */
-			return func() {
-				c.Registers[idest] = BasicArithmeticOperations[ArithmeticBitwiseNot](imm, 0)
-			}, nil
-		default:
-			return nil, &InvalidOperationError{Cbits: cbits}
-		}
-		/* This is a destructive modify */
-		return func() {
-			c.Registers[idest] = BasicArithmeticOperations[index](c.Registers[idest], imm)
-		}, nil
+		return c.DecodeArithmeticFullImmediateForm(op, i)
 	} else {
-		return nil, &InvalidOperationError{Cbits: cbits}
+		return nil, &InvalidOperationError{Cbits: i.GetControlBits()}
 	}
+}
+
+func (c *Core) DecodeArithmeticHalfImmediateForm(op OpBits, i *Instruction) ([]DecodedOperation, error) {
+	idest, isrc0, imm := i.ExtractRegisterFields()
+	index := 0
+	switch op {
+	case ArithmeticAddImmediate:
+		index = ArithmeticAdd
+	case ArithmeticSubtractImmediate:
+		index = ArithmeticSubtract
+	case ArithmeticMultiplyImmediate:
+		index = ArithmeticMultiply
+	case ArithmeticDivideImmediate:
+		if imm == 0 {
+			return nil, &DivideByZeroError{}
+		}
+		index = ArithmeticDivide
+	case ArithmeticRemainderImmediate:
+		if imm == 0 {
+			return nil, &DivideByZeroError{}
+		}
+		index = ArithmeticRemainder
+	case ArithmeticShiftLeftImmediate:
+		index = ArithmeticShiftLeft
+	case ArithmeticShiftRightImmediate:
+		index = ArithmeticShiftRight
+	default:
+		return nil, &InvalidOperationError{Cbits: i.GetControlBits()}
+	}
+	return []DecodedOperation{
+		func() { c.SetRegister(Temporary0Register, Word(imm)) },
+		func() {
+			c.Registers[idest] = BasicArithmeticOperations[index](c.Registers[isrc0], Word(imm))
+		},
+	}, nil
+}
+
+func (c *Core) DecodeArithmeticFullImmediateForm(op OpBits, i *Instruction) ([]DecodedOperation, error) {
+	idest, imm := i.ExtractRegisterImmediateFields()
+	index := 0
+	assign := func() {
+		c.Registers[Temporary0Register] = imm
+	}
+	switch op {
+	case ArithmeticBitwiseAndFullImmediate:
+		index = ArithmeticBitwiseAnd
+	case ArithmeticBitwiseOrFullImmediate:
+		index = ArithmeticBitwiseOr
+	case ArithmeticBitwiseXorFullImmediate:
+		index = ArithmeticBitwiseXor
+	case ArithmeticBitwiseClearFullImmediate:
+		index = ArithmeticBitwiseClear
+	case ArithmeticBitwiseNotFullImmediate:
+		/* special case */
+		return []DecodedOperation{
+			assign,
+			func() {
+				c.Registers[idest] = BasicArithmeticOperations[ArithmeticBitwiseNot](c.Registers[Temporary0Register], 0)
+			}}, nil
+	default:
+		return nil, &InvalidOperationError{Cbits: i.GetControlBits()}
+	}
+	/* This is a destructive modify */
+	return []DecodedOperation{
+		assign,
+		func() {
+			c.Registers[idest] = BasicArithmeticOperations[index](c.Registers[idest], c.Registers[Temporary0Register])
+		}}, nil
 }
