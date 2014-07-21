@@ -20,6 +20,14 @@ const (
 	OperationPerGroupMax    = 32
 )
 
+const (
+	ArithmeticGroup = iota
+	ConditionalGroup
+	BranchGroup
+	MemoryOperationsGroup
+	MiscGroup
+)
+
 type Core struct {
 	Registers          [RegisterCount]Word
 	CodeMemory         [MemorySize]Instruction
@@ -31,6 +39,14 @@ type Core struct {
 type InstructionRegisterRequestError struct {
 	Write bool
 	Index int
+}
+
+type InvalidOperationError struct {
+	Cbits ControlBits
+}
+
+func (e *InvalidOperationError) Error() string {
+	return fmt.Sprintf("Invalid operation: %s", e.Cbits)
 }
 
 func (e *InstructionRegisterRequestError) Error() string {
@@ -103,5 +119,37 @@ func (i *Instruction) SetRegisterField(index int, value RegisterIndex) error {
 		return nil
 	default:
 		return &InstructionRegisterRequestError{Index: index, Write: true}
+	}
+}
+
+func (i *Instruction) ExtractRegisterFields() (RegisterIndex, RegisterIndex, RegisterIndex) {
+	a, _ := i.GetRegisterField(0)
+	b, _ := i.GetRegisterField(1)
+	c, _ := i.GetRegisterField(2)
+	return a, b, c
+}
+
+func (i *Instruction) ExtractRegisterImmediateFields() (RegisterIndex, Word) {
+	a, _ := i.GetRegisterField(0)
+	return a, i.GetImmediate()
+}
+func (c ControlBits) String() string {
+	return fmt.Sprintf("(%s, %d)", c.GetGroup(), c.GetOperation())
+}
+
+func (g GroupBits) String() string {
+	switch g {
+	case ArithmeticGroup:
+		return "arithmetic"
+	case ConditionalGroup:
+		return "conditional"
+	case BranchGroup:
+		return "branch"
+	case MemoryOperationsGroup:
+		return "memory-ops"
+	case MiscGroup:
+		return "misc"
+	default:
+		return "undefined"
 	}
 }
