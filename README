@@ -1,3 +1,2 @@
-Edgeworth is a channel based acuumulator architecture designed to experiment
-with gothreads and channels in the go programming language. By its design it is
-also setup so that we can implement complex decoding logic if we so choose
+Edgeworth is a simulation of an entire system. It is written entirely in go and
+has the objective of being more readable than fast in any meaningful way. 
