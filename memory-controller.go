@@ -3,10 +3,12 @@ package edgeworth
 
 type MemoryAddress uint64
 type MemoryWord uint64
-type Memory [AcceptableMemoryRange]byte
+type Memory [MemoryControllerMax]MemoryWord
 
 const (
-	MemoryWordByteCount = 8
+	MemoryWordByteCount    = 8
+	MemoryTwoWordByteCount = MemoryWordByteCount * 2
+	MemoryControllerMax    = AcceptableMemoryRange >> 3 // eliminate the lower three bits
 )
 
 var DecomposeMasks = []MemoryWord{
@@ -20,29 +22,88 @@ var DecomposeMasks = []MemoryWord{
 	0xFF00000000000000,
 }
 
-// the controller loads 64-bit values only, so we have to add some extra
-func BlockAddress(address MemoryAddress) MemoryAddress {
-	return address & (AcceptableMemoryRange - 7)
+func byteArrayToWord(arr []byte, offset int) MemoryWord {
+	return (MemoryWord(arr[offset+7]) << 56) | (MemoryWord(arr[offset+6]) << 48) |
+		(MemoryWord(arr[offset+5]) << 40) | (MemoryWord(arr[offset+4]) << 32) |
+		(MemoryWord(arr[offset+3]) << 24) | (MemoryWord(arr[offset+2]) << 16) |
+		(MemoryWord(arr[offset+1]) << 8) | (MemoryWord(arr[offset]))
 }
 
-func (m *Memory) LoadBlock(address MemoryAddress) MemoryWord {
-	var container [8]byte
-	transformedAddr := BlockAddress(address)
-	for i := 0; i < 8; i++ {
-		offset := transformedAddr + MemoryAddress(i)
-		container[i] = m[offset]
+func byteArrayToDualWords(arr []byte) (MemoryWord, MemoryWord) {
+	return byteArrayToWord(arr, 0), byteArrayToWord(arr, MemoryWordByteCount)
+}
+func getByteArrayFromWord(addr MemoryWord) []byte {
+	return []byte{
+		byte(addr),
+		byte(addr >> 8),
+		byte(addr >> 16),
+		byte(addr >> 24),
+		byte(addr >> 32),
+		byte(addr >> 40),
+		byte(addr >> 48),
+		byte(addr >> 56),
 	}
-	// little endian
-	return (MemoryWord(container[7]) << 56) | (MemoryWord(container[6]) << 48) |
-		(MemoryWord(container[5]) << 40) | (MemoryWord(container[4]) << 32) |
-		(MemoryWord(container[3]) << 24) | (MemoryWord(container[2]) << 16) |
-		(MemoryWord(container[1]) << 8) | (MemoryWord(container[0]))
+
+}
+func wordsToByteArray(addr0, addr1 MemoryWord) []byte {
+	return []byte{
+		byte(addr0),
+		byte(addr0 >> 8),
+		byte(addr0 >> 16),
+		byte(addr0 >> 24),
+		byte(addr0 >> 32),
+		byte(addr0 >> 40),
+		byte(addr0 >> 48),
+		byte(addr0 >> 56),
+		byte(addr1),
+		byte(addr1 >> 8),
+		byte(addr1 >> 16),
+		byte(addr1 >> 24),
+		byte(addr1 >> 32),
+		byte(addr1 >> 40),
+		byte(addr1 >> 48),
+		byte(addr1 >> 56),
+	}
+}
+func (address MemoryAddress) MemoryControllerAddress() (MemoryAddress, MemoryAddress) {
+	//we will decompose the function into the upper 61 bits and the lower three bits
+	//first thing is to get rid of the upper half of the address and then construct an actuall
+	//address which we can use
+	return address & (AcceptableMemoryRange - 7) >> 3, address & 0x7
 }
 
-func (m *Memory) StoreBlock(address MemoryAddress, value MemoryWord) {
-	transformedAddr := BlockAddress(address)
-	for i := 0; i < MemoryWordByteCount; i++ {
-		offset := transformedAddr + MemoryAddress(i)
-		m[offset] = byte(value & DecomposeMasks[i])
+func (memory *Memory) LoadWord(address MemoryAddress) MemoryWord {
+	addr, offset := address.MemoryControllerAddress()
+	value0 := memory[addr]
+	if offset == 0 {
+		return value0
+	} else {
+		value1 := memory[addr+1]
+		container := wordsToByteArray(value0, value1)
+		return (MemoryWord(container[offset+7]) << 56) | (MemoryWord(container[offset+6]) << 48) |
+			(MemoryWord(container[offset+5]) << 40) | (MemoryWord(container[offset+4]) << 32) |
+			(MemoryWord(container[offset+3]) << 24) | (MemoryWord(container[offset+2]) << 16) |
+			(MemoryWord(container[offset+1]) << 8) | (MemoryWord(container[offset]))
+	}
+}
+
+func (memory *Memory) StoreWord(address MemoryAddress, value MemoryWord) {
+	addr, offset := address.MemoryControllerAddress()
+	if offset == 0 {
+		memory[addr] = value
+	} else {
+		value0 := memory[addr]
+		value1 := memory[addr+1]
+		container := wordsToByteArray(value0, value1)
+		bytes := getByteArrayFromWord(value)
+		// map into the space we pulled out
+		for i := 0; i < MemoryWordByteCount; i++ {
+			container[offset+MemoryAddress(i)] = bytes[i]
+		}
+		// reconstruct the words
+		first, second := byteArrayToDualWords(container)
+		// write to memory
+		memory[addr] = first
+		memory[addr+1] = second
 	}
 }
