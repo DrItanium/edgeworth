@@ -3,11 +3,29 @@ package edgeworth
 
 import (
 	"fmt"
+	"math"
 )
 
 const (
 	RegisterCount = 256
 )
+
+const (
+	RegisterTypeInteger = iota
+	RegisterTypeFloat
+	RegisterTypePackedFloat32
+	RegisterTypePackedInt32
+)
+
+type PackedFloat32 struct {
+	Lower float32
+	Upper float32
+}
+
+type PackedInt32 struct {
+	Lower uint32
+	Upper uint32
+}
 
 type InvalidRegisterTypeError struct {
 	Type string
@@ -17,73 +35,77 @@ func (e InvalidRegisterTypeError) Error() string {
 	return fmt.Sprintf("Error: invalid register type: %s provided for integer register", e.Type)
 }
 
-type Register interface {
-	GetValue() interface{}
-	SetValue(interface{}) error
+type Register struct {
+	Bits uint64 // raw bits
+	Tag  byte   // tag bits
 }
 
-type IntegerRegister struct {
-	value uint64
+func (r *Register) SetValue(tag byte, bits uint64) {
+	r.Tag = tag
+	r.Bits = bits
+}
+func (r *Register) SetIntegerValue(value uint64) {
+	r.SetValue(RegisterTypeInteger, value)
 }
 
-type FloatRegister struct {
-	value float64
+func (r *Register) SetFloatValue(value float64) {
+	r.SetValue(RegisterTypeFloat, math.Float64bits(value))
 }
 
-func (r IntegerRegister) GetValue() interface{} {
-	return r.value
+func (r *Register) GetFloatValue() float64 {
+	return math.Float64frombits(r.Bits)
 }
 
-func (r IntegerRegister) SetValue(v interface{}) error {
-
-	switch t := v.(type) {
+func (r *Register) GetValue() interface{} {
+	switch r.Tag {
+	case RegisterTypeFloat:
+		return r.GetFloatValue()
+	case RegisterTypePackedFloat32:
+		return r.GetFloat32Values()
+	case RegisterTypePackedInt32:
+		return r.GetInt32Values()
+	case RegisterTypeInteger:
+		fallthrough
 	default:
-		var q InvalidRegisterTypeError
-		q.Type = fmt.Sprintf("%T", t)
-		return &q
-	case uint8:
-		r.value = v.(uint64)
-		return nil
-	case int8:
-		r.value = v.(uint64)
-		return nil
-	case uint16:
-		r.value = v.(uint64)
-		return nil
-	case int16:
-		r.value = v.(uint64)
-		return nil
-	case int32:
-		r.value = v.(uint64)
-		return nil
-	case uint32:
-		r.value = v.(uint64)
-		return nil
-	case int64:
-		r.value = v.(uint64)
-		return nil
-	case uint64:
-		r.value = v.(uint64)
-		return nil
+		return r.Bits
 	}
 }
 
-func (r FloatRegister) GetValue() interface{} {
-	return r.value
+func (r *Register) GetFloat32Values() *PackedFloat32 {
+	//get the raw bits for the upper and lower half
+	lower := uint32(r.Bits)
+	upper := uint32((r.Bits & 0xFFFFFFFF00000000) >> 32)
+	return &PackedFloat32{Lower: math.Float32frombits(lower), Upper: math.Float32frombits(upper)}
 }
 
-func (r FloatRegister) SetValue(v interface{}) error {
+func (r *Register) SetPackedFloat32Value(p *PackedFloat32) {
+	blower := uint64(math.Float32bits(p.Lower))
+	bupper := uint64(math.Float32bits(p.Upper))
+	value := ((bupper << 32) | (blower & 0x00000000FFFFFFFF))
+	r.SetValue(RegisterTypePackedFloat32, value)
+}
+func (r *Register) SetFromFloat32Values(lower, upper float32) {
+	var p PackedFloat32
+	p.Lower = lower
+	p.Upper = upper
+	r.SetPackedFloat32Value(&p)
+}
+func (r *Register) GetInt32Values() *PackedInt32 {
+	//get the raw bits for the upper and lower half
+	lower := uint32(r.Bits)
+	upper := uint32(r.Bits >> 32)
+	return &PackedInt32{Lower: lower, Upper: upper}
+}
 
-	switch t := v.(type) {
-	default:
-		var q InvalidRegisterTypeError
-		q.Type = fmt.Sprintf("%T", t)
-		return &q
-	case float32:
-		r.value = v.(float64)
-		return nil
-	case float64:
-		r.value = v.(float64)
-		return nil
-	}
+func (r *Register) SetPackedInt32Value(p *PackedInt32) {
+	blower := uint64(p.Lower)
+	bupper := uint64(p.Upper)
+	value := ((bupper << 32) | (blower & 0x00000000FFFFFFFF))
+	r.SetValue(RegisterTypePackedInt32, value)
+}
+func (r *Register) SetFromInt32Values(lower, upper uint32) {
+	var p PackedInt32
+	p.Lower = lower
+	p.Upper = upper
+	r.SetPackedInt32Value(&p)
 }
