@@ -1,4 +1,4 @@
-// the edgeworth system CPU - a simple 64-bit RISC cpu with a large compliment of registers, most of them purpose built
+// Operations and declarations relating to registers
 package edgeworth
 
 import (
