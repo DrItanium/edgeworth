@@ -1,2 +1,2 @@
-Edgeworth is a simulation of an entire system. It is written entirely in go and
-has the objective of being more readable than fast in any meaningful way. 
+Edgeworth a machine registration system. It is meant to make construction of
+front end tools that can target multiple backends easier.
