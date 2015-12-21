@@ -18,6 +18,15 @@ func RegisterMachine(name string, gen MachineRegistration) error {
 		return nil
 	}
 }
+func RegisteredMachines() []string {
+	var names []string
+	if registrations != nil {
+		for name, _ := range registrations {
+			names = append(names, name)
+		}
+	}
+	return names
+}
 
 func NewMachine(name string, args ...interface{}) (Machine, error) {
 	if registrations == nil {
@@ -35,5 +44,11 @@ type MachineRegistration interface {
 }
 
 type Machine interface {
+	GetDebugStatus() bool
+	SetDebug(value bool)
+	InstallProgram(input <-chan byte) error
+	Dump(output chan<- byte) error
+	Startup() error
+	Shutdown() error
 	Run() error
 }
