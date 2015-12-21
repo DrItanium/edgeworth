@@ -3,6 +3,7 @@ package machine
 
 import (
 	"fmt"
+	"github.com/DrItanium/edgeworth"
 )
 
 var registrations map[string]Registration
@@ -12,7 +13,7 @@ func Register(name string, gen Registration) error {
 		registrations = make(map[string]Registration)
 	}
 	if _, ok := registrations[name]; ok {
-		return fmt.Errorf("Key %s is already registered!", name)
+		return fmt.Errorf("Machine %s is already registered!", name)
 	} else {
 		registrations[name] = gen
 		return nil
@@ -51,7 +52,7 @@ type Registration interface {
 	New(args ...interface{}) (Machine, error)
 }
 type Machine interface {
-	Dumper
+	edgeworth.Dumper
 	GetDebugStatus() bool
 	SetDebug(value bool)
 	InstallProgram(input <-chan byte) error
