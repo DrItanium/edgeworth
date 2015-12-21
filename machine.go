@@ -9,7 +9,7 @@ var registrations map[string]MachineRegistration
 
 func RegisterMachine(name string, gen MachineRegistration) error {
 	if registrations == nil {
-		registrations := make(map[string]MachineRegistration)
+		registrations = make(map[string]MachineRegistration)
 	}
 	if _, ok := registrations[name]; ok {
 		return fmt.Errorf("Key %s is already registered!", name)
@@ -52,3 +52,6 @@ type Machine interface {
 	Shutdown() error
 	Run() error
 }
+
+// Dummy function used to force inclusion of this library
+func Activate() {}
