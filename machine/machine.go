@@ -1,15 +1,15 @@
 // generic machine interface
-package edgeworth
+package machine
 
 import (
 	"fmt"
 )
 
-var registrations map[string]MachineRegistration
+var registrations map[string]Registration
 
-func RegisterMachine(name string, gen MachineRegistration) error {
+func Register(name string, gen Registration) error {
 	if registrations == nil {
-		registrations = make(map[string]MachineRegistration)
+		registrations = make(map[string]Registration)
 	}
 	if _, ok := registrations[name]; ok {
 		return fmt.Errorf("Key %s is already registered!", name)
@@ -18,7 +18,7 @@ func RegisterMachine(name string, gen MachineRegistration) error {
 		return nil
 	}
 }
-func RegisteredMachines() []string {
+func GetRegistered() []string {
 	var names []string
 	if registrations != nil {
 		for name, _ := range registrations {
@@ -28,7 +28,7 @@ func RegisteredMachines() []string {
 	return names
 }
 
-func NewMachine(name string, args ...interface{}) (Machine, error) {
+func New(name string, args ...interface{}) (Machine, error) {
 	if registrations == nil {
 		return nil, fmt.Errorf("No machines registered!")
 	}
@@ -38,7 +38,7 @@ func NewMachine(name string, args ...interface{}) (Machine, error) {
 		return nil, fmt.Errorf("%s does not refer to a registered machine!", name)
 	}
 }
-func MachineExists(name string) bool {
+func IsRegistered(name string) bool {
 	if registrations == nil {
 		return false
 	} else {
@@ -47,15 +47,14 @@ func MachineExists(name string) bool {
 	}
 }
 
-type MachineRegistration interface {
+type Registration interface {
 	New(args ...interface{}) (Machine, error)
 }
-
 type Machine interface {
+	Dumper
 	GetDebugStatus() bool
 	SetDebug(value bool)
 	InstallProgram(input <-chan byte) error
-	Dump(output chan<- byte) error
 	Startup() error
 	Shutdown() error
 	Run() error
