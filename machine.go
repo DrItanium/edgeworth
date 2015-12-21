@@ -38,6 +38,14 @@ func NewMachine(name string, args ...interface{}) (Machine, error) {
 		return nil, fmt.Errorf("%s does not refer to a registered machine!", name)
 	}
 }
+func MachineExists(name string) bool {
+	if registrations == nil {
+		return false
+	} else {
+		_, ok := registrations[name]
+		return ok
+	}
+}
 
 type MachineRegistration interface {
 	New(args ...interface{}) (Machine, error)
